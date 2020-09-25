@@ -1,0 +1,41 @@
+##Fetch the data part####
+val orders=sc.textFile("D:\\study_material\\CCA-175\\data-master\\retail_db\\orders\\part-00000")
+orders.map{ x=> val y=x.split(","); val z=y(1).split(" ")(0).replace("-","").toInt;z}.distinct.take(10).foreach(println)
+orders.filter( x=> {val y=x.split(","); (y(3)=="CLOSED" || y(3)=="COMPLETE") && (y(1).contains("2013-07"))} ).take(10).foreach(println)
+val orderitems=sc.textFile("D:\\study_material\\CCA-175\\data-master\\retail_db\\order_items\\part-00000")
+
+val orderitemsmap=orderitems.map{ x=> val y=x.split(","); (y(1).toInt,y(4).toFloat)}
+ val ordersjoin=orders.map{ x=> val y=x.split(","); (y(0).toInt,y(1).substring(0,10).replace("-","").toInt)}
+ orderitemsmap.aggregateByKey((0.0,0.0)) 
+ 
+val products = sc.textFile("/Users/mediakind/studymaterial/study_material/CCA-175/data-master/retail_db/products")
+val productsMap = products.
+  filter(product => product.split(",")(4) != "").
+  map(product => (product.split(",")(1).toInt, product))
+val productsGroupByCategory = productsMap.groupByKey
+
+def getTopNPricedProducts(productsIterable: Iterable[String], topN: Int): Iterable[String] = {
+  val productPrices = productsIterable.map(p => p.split(",")(4).toFloat).toSet
+  val topNPrices = productPrices.toList.sortBy(p => -p).take(topN)
+
+  val productsSorted = productsIterable.toList.sortBy(product => -product.split(",")(4).toFloat)
+  val minOfTopNPrices = topNPrices.min
+
+  val topNPricedProducts = productsSorted.takeWhile(product => product.split(",")(4).toFloat >= minOfTopNPrices)
+
+  topNPricedProducts
+}
+
+val productsIterable = productsGroupByCategory.first._2
+getTopNPricedProducts(productsIterable, 3).foreach(println)
+
+ val ds = df
+    .selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
+    .writeStream
+    .format("kafka")
+    .option("kafka.bootstrap.servers", "localhost:9092")
+    .option("topic", "topic1")
+    .option("checkpointLocation", "/Users/ebhudev/Desktop")
+    .trigger(Trigger.ProcessingTime(50000))
+    .outputMode(OutputMode.Update)
+    .start()
